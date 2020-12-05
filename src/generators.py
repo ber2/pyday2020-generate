@@ -1,4 +1,5 @@
 import datetime as dt
+from pathlib import Path
 import uuid
 
 import numpy as np
@@ -25,3 +26,15 @@ def generate_timestamps(length: int) -> pd.Series:
         lambda row: pd.Timestamp.combine(row["date"], row["hour"]), axis=1
     )
     return data["timestamp"]
+
+
+def generate_regions(length: int) -> pd.Series:
+
+    data = pd.read_csv(
+        Path(__file__).parent / "../data/region_data.csv", usecols=["region", "percent"]
+    )
+
+    values = np.random.choice(
+        data.region.values, size=length, p=data.percent.values / data.percent.sum()
+    )
+    return pd.Series(data=values, dtype="object", name="region")
