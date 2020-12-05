@@ -38,3 +38,12 @@ def generate_regions(length: int) -> pd.Series:
         data.region.values, size=length, p=data.percent.values / data.percent.sum()
     )
     return pd.Series(data=values, dtype="object", name="region")
+
+
+def generate_votes(length: int) -> pd.Series:
+
+    values = np.random.choice(
+        ["yellow", "red", "blue"], size=length, p=[0.01, 0.47, 0.52]
+    )
+
+    return pd.Series(data=values, dtype="object", name="vote")
