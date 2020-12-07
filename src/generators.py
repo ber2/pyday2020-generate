@@ -1,49 +1,65 @@
 import datetime as dt
 from pathlib import Path
 import uuid
+from typing import Dict, Any, List, Callable
 
 import numpy as np
 import pandas as pd
 
 
-def generate_voter_ids(length: int) -> pd.Series:
-    return pd.Series([str(uuid.uuid1()) for _ in range(length)], dtype="object")
+Row = Dict[str, Any]
 
 
-def generate_timestamps(length: int) -> pd.Series:
-    if length == 0:
-        return pd.Series(data=None, dtype="datetime64[ns]")
+def generate_timestamp(color: str) -> str:
+
+    if color == "red":
+        weights = np.ones(12)
+    else:
+        weights = np.concatenate([np.ones(9), 3 * np.ones(3)])
+
+    weights_normalized = weights / weights.sum()
+
     date = dt.date(2020, 12, 10)
-    hour_range = range(8, 21)
-
-    hours = [dt.time(h) for h in np.random.choice(hour_range, size=length)]
-
-    data = pd.DataFrame(hours)
-    data["date"] = date
-    data["hour"] = hours
-
-    data["timestamp"] = data.apply(
-        lambda row: pd.Timestamp.combine(row["date"], row["hour"]), axis=1
-    )
-    return data["timestamp"]
+    hour = np.random.choice(range(8, 20), size=1, p=weights_normalized)[0]
+    return pd.Timestamp.combine(date, dt.time(hour))
 
 
-def generate_regions(length: int) -> pd.Series:
+def generate_vote(color: str) -> str:
+
+    if color == "red":
+        weights = [0.01, 0.54, 0.45]
+    else:
+        weights = [0.01, 0.47, 0.52]
+
+    return np.random.choice(["yellow", "red", "blue"], size=1, p=weights)[0]
+
+
+def row_maker() -> Callable:
 
     data = pd.read_csv(
-        Path(__file__).parent / "../data/region_data.csv", usecols=["region", "percent"]
+        Path(__file__).parent / "../data/region_data.csv",
+        usecols=["region", "percent", "color"],
     )
 
-    values = np.random.choice(
-        data.region.values, size=length, p=data.percent.values / data.percent.sum()
-    )
-    return pd.Series(data=values, dtype="object", name="region")
+    regions = data.region.values
+    colors = data.set_index("region").color.to_dict()
+
+    def generate() -> Row:
+        region = np.random.choice(
+            regions, size=1, p=data.percent.values / data.percent.sum()
+        )[0]
+
+        color = colors[region]
+        return {
+            "timestamp": generate_timestamp(color),
+            "id": str(uuid.uuid1()),
+            "region": region,
+            "vote": generate_vote(color),
+        }
+
+    return generate
 
 
-def generate_votes(length: int) -> pd.Series:
-
-    values = np.random.choice(
-        ["yellow", "red", "blue"], size=length, p=[0.01, 0.47, 0.52]
-    )
-
-    return pd.Series(data=values, dtype="object", name="vote")
+def generate_votes(length: int) -> pd.DataFrame:
+    voting_machine = row_maker()
+    return pd.DataFrame([voting_machine() for _ in range(length)])
