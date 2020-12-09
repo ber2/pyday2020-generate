@@ -1,29 +1,47 @@
 import time
 from multiprocessing import Pool
 
-import pandas as pd
+import click
 
 from generators import (
     generate_votes
 )
 
 
-def generate_one_file(index: int) -> None:
-    path = f"../data/votes_{index}.csv"
+def generate_one_file(index: int, n_rows: int, path_prefix: str) -> None:
+    path = f"{path_prefix}_{index}.csv"
     tic = time.time()
-    generate_votes(2000000).to_csv(path, index=False)
+    generate_votes(n_rows).to_csv(path, index=False)
     tac = time.time()
-    print(f"Generated 2M rows in file: {index}\t{tac - tic} seconds")
+    print(f"Generated {n_rows} rows in file: {path}\t{tac - tic} seconds")
 
 
-def main() -> None:
+@click.command(help="Generate artificial examples of votes")
+@click.option(
+    "--n-rows",
+    "-r",
+    default=2000000,
+    help="Number of rows per file"
+)
+@click.option(
+    "--n-files",
+    "-f",
+    default=60,
+    help="Total number of files to generate"
+)
+@click.option(
+    "--output-prefix",
+    "-o",
+    default="../data/votes",
+    help="Output prefix for the result files"
+)
+def main(n_rows: int, n_files: int, output_prefix: str) -> None:
 
-    print("Will generate 72 files with 2M rows each")
+    print(f"Will generate {n_files} files with {n_rows} rows each")
 
-    with Pool() as pl:
-        pl.map(generate_one_file, list(range(72)))
-    # for index in range(72):
-        # generate_one_file(index, "../data/votes")
+    for index in range(n_files):
+        generate_one_file(index, n_rows, output_prefix)
+
     print("All done")
 
 
